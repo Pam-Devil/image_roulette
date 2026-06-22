@@ -16,7 +16,7 @@ let TOTAL = originalItems.length;
 
 console.log(TOTAL)
 
-const extraVoltas = 3;
+const extraVoltas = 5;
 
 function getItemHeight() {
     return originalItems[0].getBoundingClientRect().height;
@@ -31,41 +31,60 @@ function cloneItems() {
     }
 }
 
+function getItemOffsets() {
+    return originalItems.map(item => item.offsetTop);
+}
+
+
 function spin() {
     if (isSpinning) return;
 
-    if(document.querySelectorAll('.carrousel-item').length === 0) return;
+    if (document.querySelectorAll('.carrousel-item').length === 0) return;
     isSpinning = true;
     runBtn.disabled = true;
-
+    const offsets = getItemOffsets();
+    const viewportHeight = document.querySelector('.viewport').getBoundingClientRect().height;
     const ITEM_HEIGHT = getItemHeight();
     const randomIndex = Math.floor(Math.random() * TOTAL);
 
-    // Sempre parte de 0, rola 1 volta completa + randomIndex
-    // DOM tem 4×TOTAL itens, então 1 volta (TOTAL itens) sempre existe
-    const endY = -((extraVoltas * TOTAL + randomIndex) * ITEM_HEIGHT);
+    const itemTop = offsets[randomIndex];
+    const itemHeight = originalItems[randomIndex].getBoundingClientRect().height;
+    const offset = (viewportHeight / 2) - (itemHeight / 2); // centraliza
+    // quanto precisa rolar no total pra chegar nesse item (passando pelas cópias)
+    const totalDOMHeight = carousel.getBoundingClientRect().height;
+    const extraScroll = totalDOMHeight / 4; // 1 volta completa pelos clones
+    const endY = -(extraScroll + itemTop) + offset;
 
     carousel.style.transition = 'none';
-    carousel.style.transform = 'translateY(0px)';
+    carousel.style.transform = `translateY(${-(randomIndex * ITEM_HEIGHT) + offset}px)`;
 
     requestAnimationFrame(() => requestAnimationFrame(() => {
-        const duration = 5000;
+        const duration = 8000;
         let startTime = null;
+        const startY = 0;
 
+        // 3 voltas completas antes de parar
+        const minLoops = 3;
+        const loopDistance = TOTAL / ITEM_HEIGHT;
+
+        const targetY = -(itemTop + minLoops * loopDistance) + offset;
         function animate(timestamp) {
             if (!startTime) startTime = timestamp;
             const elapsed = timestamp - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 2);
-
-            carousel.style.transform = `translateY(${endY * eased}px)`;
+            const eased = 1 - Math.pow(1 - progress, 8);
+            const currentY = startY + (targetY - startY) * eased;
+            carousel.style.transform = `translateY(${currentY}px)`;
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
                 // Snap invisível para o item original correspondente
-                carousel.style.transform = `translateY(${-(randomIndex * ITEM_HEIGHT)}px)`;
+                // snap para o offsetTop real do item nos originais
+                carousel.style.transform = `translateY(${targetY}px)`;
                 currentIndex = randomIndex;
+                isSpinning = false;
+                runBtn.disabled = false;
                 const itemSorteado = originalItems[randomIndex];
                 const imgSrc = itemSorteado.querySelector('img').src;
 
@@ -74,9 +93,65 @@ function spin() {
 
                 selectedImg.src = imgSrc;
                 selectedContainer.style.visibility = 'visible';
+            }
+        }
 
+        requestAnimationFrame(animate);
+    }));
+}
+
+function spin2() {
+    if (isSpinning) return;
+
+    if (document.querySelectorAll('.carrousel-item').length === 0) return;
+    isSpinning = true;
+    runBtn.disabled = true;
+    const offsets = getItemOffsets();
+    const viewportHeight = document.querySelector('.viewport').getBoundingClientRect().height;
+    const ITEM_HEIGHT = getItemHeight();
+    const randomIndex = Math.floor(Math.random() * TOTAL);
+
+    const itemTop = offsets[randomIndex];
+    const itemHeight = originalItems[randomIndex].getBoundingClientRect().height;
+    const offset = (viewportHeight / 2) - (itemHeight / 2); // centraliza
+    // quanto precisa rolar no total pra chegar nesse item (passando pelas cópias)
+    const totalDOMHeight = carousel.getBoundingClientRect().height;
+    const extraScroll = totalDOMHeight / 4; // 1 volta completa pelos clones
+    const endY = -(extraScroll + itemTop) + offset;
+
+    carousel.style.transition = 'none';
+    carousel.style.transform = `translateY(${-(randomIndex * ITEM_HEIGHT) + offset}px)`;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const duration = 8000;
+        let startTime = null;
+        const startY = 0;
+        const targetY = -(itemTop) + offset;
+        function animate(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 8);
+            const currentY = startY + (targetY - startY) * eased;
+            carousel.style.transform = `translateY(${currentY}px)`;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Snap invisível para o item original correspondente
+                // snap para o offsetTop real do item nos originais
+                carousel.style.transform = `translateY(${targetY}px)`;
+                currentIndex = randomIndex;
                 isSpinning = false;
                 runBtn.disabled = false;
+                const itemSorteado = originalItems[randomIndex];
+                const imgSrc = itemSorteado.querySelector('img').src;
+
+                const selectedContainer = document.querySelector('.selected-container');
+                const selectedImg = selectedContainer.querySelector('img');
+
+                selectedImg.src = imgSrc;
+                selectedContainer.style.visibility = 'visible';
             }
         }
 
